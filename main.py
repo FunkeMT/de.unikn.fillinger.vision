@@ -5,14 +5,38 @@ import json
 import sys
 import os
 
-# [START generate_json]
-def main(input_path, output_filename):
-  """Translates the input file into a json output file.
 
-  Args:
-      input_file: a file object, containing lines of input to convert.
-      output_filename: the name of the file to output the json to.
+API_KEY = ""
+MAX_RESULTS = 10
+
+API_URI= 'https://vision.googleapis.com/v1/images:annotate?key='
+
+IMG_EXTENSIONS = ['.jpg', '.jpeg', '.bmp', '.png']
+CONTENT_TYPE = 'application/json'
+DETECTION_TYPES = [
+    'TYPE_UNSPECIFIED',
+    'FACE_DETECTION',
+    'LANDMARK_DETECTION',
+    'LOGO_DETECTION',
+    'LABEL_DETECTION',
+    'TEXT_DETECTION',
+    'SAFE_SEARCH_DETECTION',
+    'IMAGE_PROPERTIES'
+]
+
+
+# [START main]
+def main(input_path, output_filename):
   """
+    Google Vison API to CSV
+  """
+  request = generate_request(input_path)
+  response = call_api(request)
+  print(response)
+# [END main]
+
+# [START generate_request]
+def generate_request(input_path):
   for current_file in os.listdir(input_path):
     if current_file.endswith('.jpg'):
 
@@ -38,40 +62,11 @@ def main(input_path, output_filename):
           'image': content_json_obj,
       })
 
-      request = {'requests': request_list}
-      #print(json.dumps(request, indent=4))
-      call_api(json.dumps(request, indent=4))
+      #print(json.dumps({'requests': request_list}, indent=4))
+      return json.dumps({'requests': request_list})
+# [END generate_request]
 
-
-
-
-API_KEY = ""
-MAX_RESULTS = 10
-
-API_URI= 'https://vision.googleapis.com/v1/images:annotate?key='
-
-IMG_EXTENSIONS = ['.jpg', '.jpeg', '.bmp', '.png']
-CONTENT_TYPE = 'application/json'
-DETECTION_TYPES = [
-    'TYPE_UNSPECIFIED',
-    'FACE_DETECTION',
-    'LANDMARK_DETECTION',
-    'LOGO_DETECTION',
-    'LABEL_DETECTION',
-    'TEXT_DETECTION',
-    'SAFE_SEARCH_DETECTION',
-    'IMAGE_PROPERTIES'
-]
-
-def get_detection_type(detect_num):
-  """Return the Vision API symbol corresponding to the given number."""
-  detect_num = int(detect_num)
-  if 0 < detect_num < len(DETECTION_TYPES):
-      return DETECTION_TYPES[detect_num]
-  else:
-      return DETECTION_TYPES[0]
-# [END generate_json]
-
+# [START api_request]
 def call_api(request_data):
   response = requests.post(
     url     = API_URI + API_KEY,
@@ -79,8 +74,12 @@ def call_api(request_data):
     headers = {
       'Content-Type': CONTENT_TYPE
     })
-  
-  print(response.text)
+
+  if response.status_code == 200:
+    return json.loads(response.text)
+  else:
+    sys.exit('Error during request.\nStatus Code: %s\nResponse: %s' % (response.status_code, response.text))
+# [END api_request]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
