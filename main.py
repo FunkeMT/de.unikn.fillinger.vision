@@ -3,6 +3,7 @@ import requests
 import base64
 import json
 import sys
+import csv
 import os
 
 
@@ -30,40 +31,70 @@ def main(input_path, output_filename):
   """
     Google Vison API to CSV
   """
-  request = generate_request(input_path)
-  response = call_api(request)
-  print(response)
-# [END main]
-
-# [START generate_request]
-def generate_request(input_path):
+  responses = []
   for current_file in os.listdir(input_path):
     if current_file.endswith('.jpg'):
-
-      # init new request list
-      request_list = []
-
-      with open(input_path + '/' + current_file, 'rb') as image_file:
-        content_json_obj = {
-            'content': base64.b64encode(image_file.read()).decode('UTF-8')
-        }
-
-      feature_json_obj = []
-      feature_json_obj.append({
-        'type': DETECTION_TYPES[4],
-        'maxResults': MAX_RESULTS,
-      })
-      feature_json_obj.append({
-        'type': DETECTION_TYPES[7],
+      request = generate_request(input_path + '/' + current_file)
+      response = call_api(request)
+      responses.append({
+        'file': current_file,
+        'response': response
       })
 
-      request_list.append({
-          'features': feature_json_obj,
-          'image': content_json_obj,
-      })
+      #print(response)
+  #print(json.dumps(responses, indent=4))
 
-      #print(json.dumps({'requests': request_list}, indent=4))
-      return json.dumps({'requests': request_list})
+  create_csv(responses, output_filename)
+# [END main]
+
+# [START generate_csv]
+def create_csv(result, csv_filename):
+  with open(csv_filename, 'w') as f:
+      writer = csv.writer(f, delimiter='\t')
+      writer.writerow(['FILE', 'LABEL_1', 'LABEL_2', 'DOMINANT_COLOR_RGB'])
+      for response in result:
+          #print(response)
+          row = [
+            response['file'],
+            response['response']['responses'][0]['labelAnnotations'][0]['description'],
+            response['response']['responses'][0]['labelAnnotations'][1]['description'],
+            "(%s, %s, %s)" % (
+              response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['red'],
+              response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['green'],
+              response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['blue'],
+            )
+          ]
+          print(row)
+          writer.writerow(row)
+
+# [END generate_csv]
+
+# [START generate_request]
+def generate_request(img):
+  # init new request list
+  request_list = []
+
+  with open(img, 'rb') as image_file:
+    content_json_obj = {
+        'content': base64.b64encode(image_file.read()).decode('UTF-8')
+    }
+
+  feature_json_obj = []
+  feature_json_obj.append({
+    'type': DETECTION_TYPES[4],
+    'maxResults': MAX_RESULTS,
+  })
+  feature_json_obj.append({
+    'type': DETECTION_TYPES[7],
+  })
+
+  request_list.append({
+      'features': feature_json_obj,
+      'image': content_json_obj,
+  })
+
+  #print(json.dumps({'requests': request_list}, indent=4))
+  return json.dumps({'requests': request_list})
 # [END generate_request]
 
 # [START api_request]
