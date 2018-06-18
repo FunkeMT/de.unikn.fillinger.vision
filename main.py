@@ -73,7 +73,6 @@ def main(input_path, output_filename):
   #print(json.dumps(responses, indent=4))
 
   create_csv(responses, output_filename)
-  
 # [END main]
 
 # [START generate_csv]
@@ -81,19 +80,31 @@ def create_csv(result, csv_filename):
   spinner = Spinner(('create CSV file to %s  ' % csv_filename))
   with open(csv_filename, 'w') as f:
     writer = csv.writer(f, delimiter='\t')
-    writer.writerow(['FILE', 'LABEL_1', 'LABEL_2', 'DOMINANT_COLOR_RGB'])
+
+    head = []
+    head.append('FILE')
+    head.append('DOMINANT_COLOR_RGB')
+    for x in range(MAX_RESULTS):
+      head.append('LABEL_' + str(x))
+    writer.writerow(head)
+
     for response in result:
         #print(response)
         row = [
           response['file'],
-          response['response']['responses'][0]['labelAnnotations'][0]['description'],
-          response['response']['responses'][0]['labelAnnotations'][1]['description'],
           "(%s, %s, %s)" % (
             response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['red'],
             response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['green'],
             response['response']['responses'][0]['imagePropertiesAnnotation']['dominantColors']['colors'][1]['color']['blue'],
-          )
+          ),
         ]
+
+        for x in range(MAX_RESULTS):
+          try:
+            label = response['response']['responses'][0]['labelAnnotations'][x]['description']
+          except IndexError:
+            label = 'NULL'
+          row.append(label)
         #print(row)
 
         writer.writerow(row)
